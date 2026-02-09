@@ -34,6 +34,7 @@ func newCreateWorkspaceCommand(cfg *ClientConfig) *cobra.Command {
 		ref    string
 		secret string
 		token  string
+		dryRun bool
 	)
 
 	cmd := &cobra.Command{
@@ -45,7 +46,7 @@ func newCreateWorkspaceCommand(cfg *ClientConfig) *cobra.Command {
 				return fmt.Errorf("cannot specify both --secret and --token")
 			}
 
-			cl, ns, err := cfg.NewClient()
+			cl, ns, err := newClientOrDryRun(cfg, dryRun)
 			if err != nil {
 				return err
 			}
@@ -63,8 +64,10 @@ func newCreateWorkspaceCommand(cfg *ClientConfig) *cobra.Command {
 
 			if token != "" {
 				secretName := name + "-credentials"
-				if err := ensureCredentialSecret(cfg, secretName, "GITHUB_TOKEN", token); err != nil {
-					return err
+				if !dryRun {
+					if err := ensureCredentialSecret(cfg, secretName, "GITHUB_TOKEN", token); err != nil {
+						return err
+					}
 				}
 				ws.Spec.SecretRef = &axonv1alpha1.SecretReference{
 					Name: secretName,
@@ -73,6 +76,12 @@ func newCreateWorkspaceCommand(cfg *ClientConfig) *cobra.Command {
 				ws.Spec.SecretRef = &axonv1alpha1.SecretReference{
 					Name: secret,
 				}
+			}
+
+			ws.SetGroupVersionKind(axonv1alpha1.GroupVersion.WithKind("Workspace"))
+
+			if dryRun {
+				return printYAML(os.Stdout, ws)
 			}
 
 			if err := cl.Create(context.Background(), ws); err != nil {
@@ -88,6 +97,7 @@ func newCreateWorkspaceCommand(cfg *ClientConfig) *cobra.Command {
 	cmd.Flags().StringVar(&ref, "ref", "", "git reference (branch, tag, or commit SHA)")
 	cmd.Flags().StringVar(&secret, "secret", "", "secret name containing GITHUB_TOKEN for git authentication")
 	cmd.Flags().StringVar(&token, "token", "", "GitHub token (auto-creates a secret)")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "print the resource that would be created without submitting it")
 
 	cmd.MarkFlagRequired("name")
 	cmd.MarkFlagRequired("repo")
@@ -105,6 +115,7 @@ func newCreateTaskSpawnerCommand(cfg *ClientConfig) *cobra.Command {
 		schedule       string
 		state          string
 		promptTemplate string
+		dryRun         bool
 	)
 
 	cmd := &cobra.Command{
@@ -135,7 +146,7 @@ func newCreateTaskSpawnerCommand(cfg *ClientConfig) *cobra.Command {
 				return fmt.Errorf("no credentials configured (set secret in config file, or use --secret flag)")
 			}
 
-			cl, ns, err := cfg.NewClient()
+			cl, ns, err := newClientOrDryRun(cfg, dryRun)
 			if err != nil {
 				return err
 			}
@@ -173,6 +184,12 @@ func newCreateTaskSpawnerCommand(cfg *ClientConfig) *cobra.Command {
 				}
 			}
 
+			ts.SetGroupVersionKind(axonv1alpha1.GroupVersion.WithKind("TaskSpawner"))
+
+			if dryRun {
+				return printYAML(os.Stdout, ts)
+			}
+
 			if err := cl.Create(context.Background(), ts); err != nil {
 				return fmt.Errorf("creating task spawner: %w", err)
 			}
@@ -189,6 +206,7 @@ func newCreateTaskSpawnerCommand(cfg *ClientConfig) *cobra.Command {
 	cmd.Flags().StringVar(&schedule, "schedule", "", "cron schedule expression (for cron source)")
 	cmd.Flags().StringVar(&state, "state", "open", "GitHub issue state filter (open, closed, all)")
 	cmd.Flags().StringVar(&promptTemplate, "prompt-template", "", "Go text/template for rendering the task prompt")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "print the resource that would be created without submitting it")
 
 	cmd.MarkFlagRequired("name")
 

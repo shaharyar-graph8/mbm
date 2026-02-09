@@ -28,11 +28,24 @@ import (
 const fieldManager = "axon"
 
 func newInstallCommand(cfg *ClientConfig) *cobra.Command {
+	var dryRun bool
+
 	cmd := &cobra.Command{
 		Use:   "install",
 		Short: "Install axon CRDs and controller into the cluster",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			controllerManifest := versionedManifest(manifests.InstallController)
+
+			if dryRun {
+				if _, err := os.Stdout.Write(manifests.InstallCRD); err != nil {
+					return err
+				}
+				fmt.Fprintln(os.Stdout, "---")
+				_, err := os.Stdout.Write(controllerManifest)
+				return err
+			}
+
 			restConfig, _, err := cfg.resolveConfig()
 			if err != nil {
 				return err
@@ -54,7 +67,6 @@ func newInstallCommand(cfg *ClientConfig) *cobra.Command {
 				return fmt.Errorf("installing CRDs: %w", err)
 			}
 
-			controllerManifest := versionedManifest(manifests.InstallController)
 			fmt.Fprintf(os.Stdout, "Installing axon controller (version: %s)\n", version.Version)
 			if err := applyManifests(ctx, dc, dyn, controllerManifest); err != nil {
 				return fmt.Errorf("installing controller: %w", err)
@@ -64,6 +76,8 @@ func newInstallCommand(cfg *ClientConfig) *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "print the manifests that would be applied without installing")
 
 	return cmd
 }
