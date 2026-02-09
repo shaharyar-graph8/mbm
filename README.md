@@ -6,7 +6,7 @@
 [![Go Version](https://img.shields.io/github/go-mod/go-version/axon-core/axon)](https://github.com/axon-core/axon)
 [![License](https://img.shields.io/badge/License-BSL%201.1-blue.svg)](LICENSE)
 
-Axon is a Kubernetes controller that runs AI coding agents (like Claude Code) in isolated, ephemeral Pods with full autonomy. You get the speed of `--dangerously-skip-permissions` without the risk — and the ability to fan out hundreds of agents in parallel across repos and CI pipelines.
+Axon is a Kubernetes controller that runs AI coding agents (Claude Code, OpenAI Codex, Google Gemini) in isolated, ephemeral Pods with full autonomy. You get the speed of unrestricted permissions without the risk — and the ability to fan out hundreds of agents in parallel across repos and CI pipelines.
 
 ## Demo
 
@@ -65,7 +65,7 @@ AI coding agents are most powerful when they run fully autonomous — no permiss
  Task: update docs ────┘
 ```
 
-You apply a Task, Axon runs it as an isolated Job with `--dangerously-skip-permissions`, and tracks it through `Pending → Running → Succeeded/Failed`. Currently supported agents: **Claude Code**.
+You apply a Task, Axon runs it as an isolated Job with full autonomy, and tracks it through `Pending → Running → Succeeded/Failed`. Currently supported agents: **Claude Code**, **OpenAI Codex**, and **Google Gemini**.
 
 <details>
 <summary>TaskSpawner — Automatic Task Creation from External Sources</summary>
@@ -305,7 +305,7 @@ The key pattern here is `excludeLabels: [axon/needs-input]` — this creates a f
 
 | Field | Description | Required |
 |-------|-------------|----------|
-| `spec.type` | Agent type (`claude-code`) | Yes |
+| `spec.type` | Agent type (`claude-code`, `codex`, or `gemini`) | Yes |
 | `spec.prompt` | Task prompt for the agent | Yes |
 | `spec.credentials.type` | `api-key` or `oauth` | Yes |
 | `spec.credentials.secretRef.name` | Secret name with credentials | Yes |
@@ -334,7 +334,7 @@ The key pattern here is `excludeLabels: [axon/needs-input]` — this creates a f
 | `spec.when.githubIssues.labels` | Filter issues by labels | No |
 | `spec.when.githubIssues.excludeLabels` | Exclude issues with these labels | No |
 | `spec.when.githubIssues.state` | Filter by state: `open`, `closed`, `all` (default: `open`) | No |
-| `spec.taskTemplate.type` | Agent type (`claude-code`) | Yes |
+| `spec.taskTemplate.type` | Agent type (`claude-code`, `codex`, or `gemini`) | Yes |
 | `spec.taskTemplate.credentials` | Credentials for the agent (same as Task) | Yes |
 | `spec.taskTemplate.model` | Model override | No |
 | `spec.taskTemplate.promptTemplate` | Go text/template for prompt (`{{.Title}}`, `{{.Body}}`, `{{.Number}}`, etc.) | No |
