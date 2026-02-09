@@ -449,7 +449,7 @@ axon get taskspawners
 axon logs my-task -f
 
 # Delete a task
-axon delete my-task
+axon delete task my-task
 
 # Uninstall axon from the cluster
 axon uninstall
