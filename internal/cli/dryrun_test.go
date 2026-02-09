@@ -1,0 +1,324 @@
+package cli
+
+import (
+	"bytes"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func TestRunCommand_DryRun(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.yaml")
+	if err := os.WriteFile(cfgPath, []byte("secret: my-secret\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var buf bytes.Buffer
+	cmd := NewRootCommand()
+	cmd.SetOut(&buf)
+	cmd.SetArgs([]string{
+		"run",
+		"--config", cfgPath,
+		"--dry-run",
+		"--prompt", "hello world",
+		"--name", "test-task",
+		"--namespace", "test-ns",
+	})
+
+	// Capture stdout.
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	if err := cmd.Execute(); err != nil {
+		w.Close()
+		os.Stdout = old
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	w.Close()
+	os.Stdout = old
+	var out bytes.Buffer
+	out.ReadFrom(r)
+	output := out.String()
+
+	if !strings.Contains(output, "kind: Task") {
+		t.Errorf("expected YAML output to contain 'kind: Task', got:\n%s", output)
+	}
+	if !strings.Contains(output, "name: test-task") {
+		t.Errorf("expected YAML output to contain 'name: test-task', got:\n%s", output)
+	}
+	if !strings.Contains(output, "namespace: test-ns") {
+		t.Errorf("expected YAML output to contain 'namespace: test-ns', got:\n%s", output)
+	}
+	if !strings.Contains(output, "prompt: hello world") {
+		t.Errorf("expected YAML output to contain 'prompt: hello world', got:\n%s", output)
+	}
+	if !strings.Contains(output, "my-secret") {
+		t.Errorf("expected YAML output to contain secret name 'my-secret', got:\n%s", output)
+	}
+	// Ensure no "created" message is printed.
+	if strings.Contains(output, "created") {
+		t.Errorf("dry-run should not print 'created' message, got:\n%s", output)
+	}
+}
+
+func TestRunCommand_DryRun_WithWorkspaceConfig(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.yaml")
+	cfg := `secret: my-secret
+workspace:
+  repo: https://github.com/org/repo.git
+  ref: main
+`
+	if err := os.WriteFile(cfgPath, []byte(cfg), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := NewRootCommand()
+	cmd.SetArgs([]string{
+		"run",
+		"--config", cfgPath,
+		"--dry-run",
+		"--prompt", "hello",
+		"--name", "ws-task",
+		"--namespace", "test-ns",
+	})
+
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	if err := cmd.Execute(); err != nil {
+		w.Close()
+		os.Stdout = old
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	w.Close()
+	os.Stdout = old
+	var out bytes.Buffer
+	out.ReadFrom(r)
+	output := out.String()
+
+	if !strings.Contains(output, "axon-workspace") {
+		t.Errorf("expected workspace reference 'axon-workspace' in dry-run output, got:\n%s", output)
+	}
+}
+
+func TestCreateWorkspaceCommand_DryRun(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.yaml")
+	if err := os.WriteFile(cfgPath, []byte(""), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := NewRootCommand()
+	cmd.SetArgs([]string{
+		"create", "workspace",
+		"--config", cfgPath,
+		"--dry-run",
+		"--name", "my-ws",
+		"--repo", "https://github.com/org/repo.git",
+		"--ref", "main",
+		"--secret", "gh-token",
+		"--namespace", "test-ns",
+	})
+
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	if err := cmd.Execute(); err != nil {
+		w.Close()
+		os.Stdout = old
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	w.Close()
+	os.Stdout = old
+	var out bytes.Buffer
+	out.ReadFrom(r)
+	output := out.String()
+
+	if !strings.Contains(output, "kind: Workspace") {
+		t.Errorf("expected 'kind: Workspace' in output, got:\n%s", output)
+	}
+	if !strings.Contains(output, "name: my-ws") {
+		t.Errorf("expected 'name: my-ws' in output, got:\n%s", output)
+	}
+	if !strings.Contains(output, "namespace: test-ns") {
+		t.Errorf("expected 'namespace: test-ns' in output, got:\n%s", output)
+	}
+	if !strings.Contains(output, "https://github.com/org/repo.git") {
+		t.Errorf("expected repo URL in output, got:\n%s", output)
+	}
+	if !strings.Contains(output, "gh-token") {
+		t.Errorf("expected secret name in output, got:\n%s", output)
+	}
+	if strings.Contains(output, "created") {
+		t.Errorf("dry-run should not print 'created' message, got:\n%s", output)
+	}
+}
+
+func TestCreateWorkspaceCommand_DryRun_WithToken(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.yaml")
+	if err := os.WriteFile(cfgPath, []byte(""), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := NewRootCommand()
+	cmd.SetArgs([]string{
+		"create", "workspace",
+		"--config", cfgPath,
+		"--dry-run",
+		"--name", "my-ws",
+		"--repo", "https://github.com/org/repo.git",
+		"--token", "ghp_test123",
+		"--namespace", "test-ns",
+	})
+
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	if err := cmd.Execute(); err != nil {
+		w.Close()
+		os.Stdout = old
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	w.Close()
+	os.Stdout = old
+	var out bytes.Buffer
+	out.ReadFrom(r)
+	output := out.String()
+
+	// Token should produce a secret reference in the output.
+	if !strings.Contains(output, "my-ws-credentials") {
+		t.Errorf("expected auto-generated secret name 'my-ws-credentials' in output, got:\n%s", output)
+	}
+}
+
+func TestCreateTaskSpawnerCommand_DryRun(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.yaml")
+	if err := os.WriteFile(cfgPath, []byte("secret: my-secret\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := NewRootCommand()
+	cmd.SetArgs([]string{
+		"create", "taskspawner",
+		"--config", cfgPath,
+		"--dry-run",
+		"--name", "my-spawner",
+		"--workspace", "my-ws",
+		"--namespace", "test-ns",
+	})
+
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	if err := cmd.Execute(); err != nil {
+		w.Close()
+		os.Stdout = old
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	w.Close()
+	os.Stdout = old
+	var out bytes.Buffer
+	out.ReadFrom(r)
+	output := out.String()
+
+	if !strings.Contains(output, "kind: TaskSpawner") {
+		t.Errorf("expected 'kind: TaskSpawner' in output, got:\n%s", output)
+	}
+	if !strings.Contains(output, "name: my-spawner") {
+		t.Errorf("expected 'name: my-spawner' in output, got:\n%s", output)
+	}
+	if !strings.Contains(output, "my-secret") {
+		t.Errorf("expected secret name in output, got:\n%s", output)
+	}
+	if strings.Contains(output, "created") {
+		t.Errorf("dry-run should not print 'created' message, got:\n%s", output)
+	}
+}
+
+func TestCreateTaskSpawnerCommand_DryRun_Cron(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.yaml")
+	if err := os.WriteFile(cfgPath, []byte("secret: my-secret\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := NewRootCommand()
+	cmd.SetArgs([]string{
+		"create", "taskspawner",
+		"--config", cfgPath,
+		"--dry-run",
+		"--name", "cron-spawner",
+		"--schedule", "*/5 * * * *",
+		"--namespace", "test-ns",
+	})
+
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	if err := cmd.Execute(); err != nil {
+		w.Close()
+		os.Stdout = old
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	w.Close()
+	os.Stdout = old
+	var out bytes.Buffer
+	out.ReadFrom(r)
+	output := out.String()
+
+	if !strings.Contains(output, "kind: TaskSpawner") {
+		t.Errorf("expected 'kind: TaskSpawner' in output, got:\n%s", output)
+	}
+	if !strings.Contains(output, "*/5 * * * *") {
+		t.Errorf("expected cron schedule in output, got:\n%s", output)
+	}
+}
+
+func TestInstallCommand_DryRun(t *testing.T) {
+	cmd := NewRootCommand()
+	cmd.SetArgs([]string{"install", "--dry-run"})
+
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	if err := cmd.Execute(); err != nil {
+		w.Close()
+		os.Stdout = old
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	w.Close()
+	os.Stdout = old
+	var out bytes.Buffer
+	out.ReadFrom(r)
+	output := out.String()
+
+	if !strings.Contains(output, "CustomResourceDefinition") {
+		t.Errorf("expected CRD manifest in dry-run output, got:\n%s", output[:min(len(output), 500)])
+	}
+	if !strings.Contains(output, "Deployment") {
+		t.Errorf("expected Deployment manifest in dry-run output, got:\n%s", output[:min(len(output), 500)])
+	}
+	// Should not contain installation messages.
+	if strings.Contains(output, "Installing axon") {
+		t.Errorf("dry-run should not print installation messages, got:\n%s", output[:min(len(output), 500)])
+	}
+}

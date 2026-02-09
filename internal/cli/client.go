@@ -79,3 +79,32 @@ func (c *ClientConfig) resolveConfig() (*rest.Config, string, error) {
 
 	return restConfig, ns, nil
 }
+
+// newClientOrDryRun returns a real client and namespace when dryRun is
+// false, or a nil client with a resolved namespace when dryRun is true.
+func newClientOrDryRun(cfg *ClientConfig, dryRun bool) (client.Client, string, error) {
+	if dryRun {
+		return nil, cfg.ResolveNamespace(), nil
+	}
+	return cfg.NewClient()
+}
+
+// ResolveNamespace returns the namespace to use, resolving from the
+// kubeconfig context when no explicit namespace is set. It falls back
+// to "default" when the namespace cannot be determined.
+func (c *ClientConfig) ResolveNamespace() string {
+	if c.Namespace != "" {
+		return c.Namespace
+	}
+
+	rules := clientcmd.NewDefaultClientConfigLoadingRules()
+	if c.Kubeconfig != "" {
+		rules.ExplicitPath = c.Kubeconfig
+	}
+	config := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(rules, &clientcmd.ConfigOverrides{})
+	ns, _, err := config.Namespace()
+	if err != nil || ns == "" {
+		return "default"
+	}
+	return ns
+}

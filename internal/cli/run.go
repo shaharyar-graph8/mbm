@@ -27,6 +27,7 @@ func newRunCommand(cfg *ClientConfig) *cobra.Command {
 		name           string
 		watch          bool
 		workspace      string
+		dryRun         bool
 	)
 
 	cmd := &cobra.Command{
@@ -57,16 +58,20 @@ func newRunCommand(cfg *ClientConfig) *cobra.Command {
 					return fmt.Errorf("config file must specify either oauthToken or apiKey, not both")
 				}
 				if token := cfg.Config.OAuthToken; token != "" {
-					oauthKey := oauthSecretKey(agentType)
-					if err := ensureCredentialSecret(cfg, "axon-credentials", oauthKey, token); err != nil {
-						return err
+					if !dryRun {
+						oauthKey := oauthSecretKey(agentType)
+						if err := ensureCredentialSecret(cfg, "axon-credentials", oauthKey, token); err != nil {
+							return err
+						}
 					}
 					secret = "axon-credentials"
 					credentialType = "oauth"
 				} else if key := cfg.Config.APIKey; key != "" {
-					apiKey := apiKeySecretKey(agentType)
-					if err := ensureCredentialSecret(cfg, "axon-credentials", apiKey, key); err != nil {
-						return err
+					if !dryRun {
+						apiKey := apiKeySecretKey(agentType)
+						if err := ensureCredentialSecret(cfg, "axon-credentials", apiKey, key); err != nil {
+							return err
+						}
 					}
 					secret = "axon-credentials"
 					credentialType = "api-key"
@@ -77,48 +82,55 @@ func newRunCommand(cfg *ClientConfig) *cobra.Command {
 				return fmt.Errorf("no credentials configured (set oauthToken/apiKey in config file, or use --secret flag)")
 			}
 
-			cl, ns, err := cfg.NewClient()
+			cl, ns, err := newClientOrDryRun(cfg, dryRun)
 			if err != nil {
 				return err
 			}
 
-			// Auto-create Workspace CR from inline config if no --workspace flag.
-			if workspace == "" && cfg.Config != nil && cfg.Config.Workspace.Repo != "" {
-				wsCfg := cfg.Config.Workspace
-				wsName := "axon-workspace"
-				ws := &axonv1alpha1.Workspace{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      wsName,
-						Namespace: ns,
-					},
-					Spec: axonv1alpha1.WorkspaceSpec{
-						Repo: wsCfg.Repo,
-						Ref:  wsCfg.Ref,
-					},
+			if dryRun {
+				// Resolve workspace from inline config for dry-run.
+				if workspace == "" && cfg.Config != nil && cfg.Config.Workspace.Repo != "" {
+					workspace = "axon-workspace"
 				}
-				if wsCfg.Token != "" {
-					if err := ensureCredentialSecret(cfg, "axon-workspace-credentials", "GITHUB_TOKEN", wsCfg.Token); err != nil {
-						return err
+			} else {
+				// Auto-create Workspace CR from inline config if no --workspace flag.
+				if workspace == "" && cfg.Config != nil && cfg.Config.Workspace.Repo != "" {
+					wsCfg := cfg.Config.Workspace
+					wsName := "axon-workspace"
+					ws := &axonv1alpha1.Workspace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      wsName,
+							Namespace: ns,
+						},
+						Spec: axonv1alpha1.WorkspaceSpec{
+							Repo: wsCfg.Repo,
+							Ref:  wsCfg.Ref,
+						},
 					}
-					ws.Spec.SecretRef = &axonv1alpha1.SecretReference{
-						Name: "axon-workspace-credentials",
+					if wsCfg.Token != "" {
+						if err := ensureCredentialSecret(cfg, "axon-workspace-credentials", "GITHUB_TOKEN", wsCfg.Token); err != nil {
+							return err
+						}
+						ws.Spec.SecretRef = &axonv1alpha1.SecretReference{
+							Name: "axon-workspace-credentials",
+						}
 					}
+					ctx := context.Background()
+					if err := cl.Create(ctx, ws); err != nil {
+						if !apierrors.IsAlreadyExists(err) {
+							return fmt.Errorf("creating workspace: %w", err)
+						}
+						existing := &axonv1alpha1.Workspace{}
+						if err := cl.Get(ctx, client.ObjectKey{Name: wsName, Namespace: ns}, existing); err != nil {
+							return fmt.Errorf("fetching existing workspace: %w", err)
+						}
+						existing.Spec = ws.Spec
+						if err := cl.Update(ctx, existing); err != nil {
+							return fmt.Errorf("updating workspace: %w", err)
+						}
+					}
+					workspace = wsName
 				}
-				ctx := context.Background()
-				if err := cl.Create(ctx, ws); err != nil {
-					if !apierrors.IsAlreadyExists(err) {
-						return fmt.Errorf("creating workspace: %w", err)
-					}
-					existing := &axonv1alpha1.Workspace{}
-					if err := cl.Get(ctx, client.ObjectKey{Name: wsName, Namespace: ns}, existing); err != nil {
-						return fmt.Errorf("fetching existing workspace: %w", err)
-					}
-					existing.Spec = ws.Spec
-					if err := cl.Update(ctx, existing); err != nil {
-						return fmt.Errorf("updating workspace: %w", err)
-					}
-				}
-				workspace = wsName
 			}
 
 			if name == "" {
@@ -150,6 +162,12 @@ func newRunCommand(cfg *ClientConfig) *cobra.Command {
 				}
 			}
 
+			task.SetGroupVersionKind(axonv1alpha1.GroupVersion.WithKind("Task"))
+
+			if dryRun {
+				return printYAML(os.Stdout, task)
+			}
+
 			ctx := context.Background()
 			if err := cl.Create(ctx, task); err != nil {
 				return fmt.Errorf("creating task: %w", err)
@@ -172,6 +190,7 @@ func newRunCommand(cfg *ClientConfig) *cobra.Command {
 	cmd.Flags().StringVar(&name, "name", "", "task name (auto-generated if omitted)")
 	cmd.Flags().StringVar(&workspace, "workspace", "", "name of Workspace resource to use")
 	cmd.Flags().BoolVarP(&watch, "watch", "w", false, "watch task status after creation")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "print the resource that would be created without submitting it")
 
 	cmd.MarkFlagRequired("prompt")
 
