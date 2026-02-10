@@ -1,0 +1,13 @@
+apiVersion: axon.io/v1alpha1
+kind: Task
+metadata:
+  name: add-tests
+spec:
+  type: claude-code
+  prompt: "Add unit tests for all untested functions and open a PR with the changes."
+  credentials:
+    type: oauth
+    secretRef:
+      name: claude-oauth
+  workspaceRef:
+    name: my-workspace

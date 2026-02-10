@@ -1,0 +1,11 @@
+apiVersion: axon.io/v1alpha1
+kind: Task
+metadata:
+  name: simple-task
+spec:
+  type: claude-code
+  prompt: "Write a Python script that prints the first 20 Fibonacci numbers."
+  credentials:
+    type: api-key
+    secretRef:
+      name: anthropic-api-key

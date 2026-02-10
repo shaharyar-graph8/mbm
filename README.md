@@ -298,6 +298,10 @@ See [`self-development/axon-workers.yaml`](self-development/axon-workers.yaml) f
 
 The key pattern here is `excludeLabels: [axon/needs-input]` — this creates a feedback loop where the agent works autonomously until it needs human input, then pauses. Removing the label re-queues the issue on the next poll.
 
+### Copy-paste YAML manifests
+
+The [`examples/`](examples/) directory contains self-contained, ready-to-apply YAML manifests for common use cases — from a simple Task with an API key to a full TaskSpawner driven by GitHub Issues or a cron schedule. Each example includes all required resources and clear `# TODO:` placeholders.
+
 ## Features
 
 | Feature | Details |
