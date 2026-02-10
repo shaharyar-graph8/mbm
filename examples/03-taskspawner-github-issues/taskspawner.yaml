@@ -1,0 +1,27 @@
+apiVersion: axon.io/v1alpha1
+kind: TaskSpawner
+metadata:
+  name: fix-bugs
+spec:
+  when:
+    githubIssues:
+      labels:
+        - bug
+      state: open
+  taskTemplate:
+    type: claude-code
+    workspaceRef:
+      name: my-workspace
+    credentials:
+      type: oauth
+      secretRef:
+        name: claude-credentials
+    promptTemplate: |
+      Fix the following GitHub issue and open a PR with the fix.
+
+      Issue #{{.Number}}: {{.Title}}
+
+      {{.Body}}
+    ttlSecondsAfterFinished: 3600
+  pollInterval: 5m
+  maxConcurrency: 3

@@ -1,0 +1,20 @@
+apiVersion: axon.io/v1alpha1
+kind: TaskSpawner
+metadata:
+  name: weekly-dependency-update
+spec:
+  when:
+    cron:
+      schedule: "0 9 * * 1" # Every Monday at 9:00 AM UTC
+  taskTemplate:
+    type: claude-code
+    workspaceRef:
+      name: my-workspace
+    credentials:
+      type: api-key
+      secretRef:
+        name: anthropic-api-key
+    promptTemplate: |
+      Check for outdated dependencies, update them to the latest compatible
+      versions, run the tests, and open a PR with the changes.
+    ttlSecondsAfterFinished: 3600
