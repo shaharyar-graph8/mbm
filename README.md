@@ -29,7 +29,7 @@ $ axon init
 #     token: <github-token>
 ```
 
-https://github.com/user-attachments/assets/b45228ef-4885-4103-8edf-97de1a32c6db
+https://github.com/user-attachments/assets/837cd8d5-4071-42dd-be32-114c649386ff
 
 See [Examples](#examples) for a full autonomous self-development pipeline.
 
