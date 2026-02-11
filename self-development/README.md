@@ -106,18 +106,33 @@ kubectl logs -l job-name=<job-name> -f
 
 ### axon-fake-user.yaml
 
-This TaskSpawner runs hourly to test the developer experience as if you were a new user.
+This TaskSpawner runs daily to test the developer experience as if you were a new user.
 
 **Deploy:**
 ```bash
 kubectl apply -f self-development/axon-fake-user.yaml
 ```
 
-This spawner uses a cron schedule and will create a task every hour to:
+This spawner uses a daily cron schedule (`0 9 * * *`) and will create a task each day to:
 - Test documentation and onboarding flows
 - Check CLI help text and error messages
 - Review examples and identify gaps
 - Create GitHub issues for any problems found
+
+### axon-fake-strategist.yaml
+
+This TaskSpawner runs every 12 hours to strategically explore new ways to use and improve Axon.
+
+**Deploy:**
+```bash
+kubectl apply -f self-development/axon-fake-strategist.yaml
+```
+
+This spawner uses a cron schedule (`0 */12 * * *`) and will create a task every 12 hours to focus on one of:
+- **New Use Cases** — explore what types of projects/teams could benefit from Axon, propose example TaskSpawner configs
+- **Workflow Improvements** — analyze existing self-development configs and suggest better patterns, prompts, or automation flows
+- **Integration Opportunities** — identify tools/platforms Axon could integrate with (CI systems, monitoring, chat ops, etc.)
+- **New CRDs & API Extensions** — propose new Custom Resource Definitions or extensions to existing CRDs that would expand Axon's capabilities
 
 ## Customizing for Your Repository
 

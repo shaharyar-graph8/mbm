@@ -5,7 +5,7 @@ metadata:
 spec:
   when:
     cron:
-      schedule: "0 * * * *"
+      schedule: "0 9 * * *"
   taskTemplate:
     workspaceRef:
       name: axon-workspace
