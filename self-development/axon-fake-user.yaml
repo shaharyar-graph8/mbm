@@ -6,11 +6,13 @@ spec:
   when:
     cron:
       schedule: "0 9 * * *"
+  maxConcurrency: 1
   taskTemplate:
     workspaceRef:
       name: axon-agent
     model: sonnet
     type: claude-code
+    ttlSecondsAfterFinished: 3600
     credentials:
       type: oauth
       secretRef:
