@@ -1,16 +1,18 @@
-# Axon
+# MBM
 
-**The Kubernetes-native framework for orchestrating autonomous AI coding agents.**
+**Kubernetes-native framework for orchestrating autonomous AI coding agents.**
 
-[![CI](https://github.com/axon-core/axon/actions/workflows/ci.yaml/badge.svg)](https://github.com/axon-core/axon/actions/workflows/ci.yaml)
-[![Go Version](https://img.shields.io/github/go-mod/go-version/axon-core/axon)](https://github.com/axon-core/axon)
+[![Release](https://github.com/shaharyar-graph8/mbm/actions/workflows/release.yaml/badge.svg)](https://github.com/shaharyar-graph8/mbm/actions/workflows/release.yaml)
+[![CI](https://github.com/shaharyar-graph8/mbm/actions/workflows/ci.yaml/badge.svg)](https://github.com/shaharyar-graph8/mbm/actions/workflows/ci.yaml)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-Axon is an orchestration framework that turns AI coding agents into scalable, autonomous Kubernetes workloads. By providing a standardized interface for agents (Claude Code, OpenAI Codex, Google Gemini) and powerful orchestration primitives, Axon allows you to build complex, self-healing AI development pipelines that run with full autonomy in isolated, ephemeral Pods.
+MBM is an orchestration framework that turns AI coding agents into scalable, autonomous Kubernetes workloads. By providing a standardized interface for agents (Claude Code, OpenAI Codex, Google Gemini) and powerful orchestration primitives, MBM allows you to build complex, self-healing AI development pipelines that run with full autonomy in isolated, ephemeral Pods.
+
+> **Note:** MBM is a maintained fork of [Axon](https://github.com/axon-core/axon). CRDs use the `axon.io` API group for backwards compatibility.
 
 ## Framework Core
 
-Axon is built on four main primitives that enable sophisticated agent orchestration:
+MBM is built on four main primitives that enable sophisticated agent orchestration:
 
 1.  **Tasks**: Ephemeral units of work that wrap an AI agent run.
 2.  **Workspaces**: Persistent or ephemeral environments (git repos) where agents operate.
@@ -21,8 +23,8 @@ Axon is built on four main primitives that enable sophisticated agent orchestrat
 
 ```bash
 # Initialize your config
-$ axon init
-# Edit ~/.axon/config.yaml with your token and workspace:
+$ mbm init
+# Edit ~/.mbm/config.yaml with your token and workspace:
 #   oauthToken: <your-oauth-token>
 #   workspace:
 #     repo: https://github.com/your-org/your-repo.git
@@ -34,19 +36,19 @@ https://github.com/user-attachments/assets/837cd8d5-4071-42dd-be32-114c649386ff
 
 See [Examples](#examples) for a full autonomous self-development pipeline.
 
-## Why Axon?
+## Why MBM?
 
-AI coding agents are evolving from interactive CLI tools into autonomous background workers. Axon provides the necessary infrastructure to manage this transition at scale.
+AI coding agents are evolving from interactive CLI tools into autonomous background workers. MBM provides the necessary infrastructure to manage this transition at scale.
 
 - **Orchestration, not just execution** — Don't just run an agent; manage its entire lifecycle. Use `TaskSpawner` to build event-driven AI workers that react to GitHub issues, PRs, or schedules.
 - **Safe autonomy** — Agents run with `--dangerously-skip-permissions` inside isolated, ephemeral Pods. They get full speed and autonomy within a zero-risk blast radius for your host and infrastructure.
-- **Standardized Interface** — Plug in any agent (Claude, Codex, Gemini, or your own) using a simple container interface. Axon handles the Kubernetes plumbing, credential injection, and workspace management.
+- **Standardized Interface** — Plug in any agent (Claude, Codex, Gemini, or your own) using a simple container interface. MBM handles the Kubernetes plumbing, credential injection, and workspace management.
 - **Massive Parallelism** — Fan out hundreds of agents across multiple repositories. Kubernetes handles the scheduling, resource management, and queueing.
 - **Observable & CI-Native** — Every agent run is a first-class Kubernetes resource. Monitor progress via `kubectl`, integrate with ArgoCD, or trigger via GitHub Actions.
 
 ## How It Works
 
-Axon orchestrates the flow from external events to autonomous execution:
+MBM orchestrates the flow from external events to autonomous execution:
 
 ```
   Triggers (GitHub, Cron) ──┐
@@ -56,7 +58,7 @@ Axon orchestrates the flow from external events to autonomous execution:
   API (CI/CD, Webhooks) ────┘          └─(Lifecycle)──┴─(Execution)─┴─(Success/Fail)
 ```
 
-You define what needs to be done, and Axon handles the "how" — from cloning the right repo and injecting credentials to running the agent and capturing its outputs (like PR URLs and branch names).
+You define what needs to be done, and MBM handles the "how" — from cloning the right repo and injecting credentials to running the agent and capturing its outputs (like PR URLs and branch names).
 
 <details>
 <summary>TaskSpawner — Automatic Task Creation from External Sources</summary>
@@ -83,21 +85,37 @@ TaskSpawner watches external sources (e.g., GitHub Issues) and automatically cre
 
 ### 1. Install the CLI
 
+Download the latest release from [GitHub Releases](https://github.com/shaharyar-graph8/mbm/releases):
+
 ```bash
-go install github.com/axon-core/axon/cmd/axon@latest
+# Linux (amd64)
+curl -fsSL -o /usr/local/bin/mbm \
+  https://github.com/shaharyar-graph8/mbm/releases/latest/download/mbm-linux-amd64
+chmod +x /usr/local/bin/mbm
+
+# macOS (Apple Silicon)
+curl -fsSL -o /usr/local/bin/mbm \
+  https://github.com/shaharyar-graph8/mbm/releases/latest/download/mbm-darwin-arm64
+chmod +x /usr/local/bin/mbm
 ```
 
-### 2. Install Axon
+Or install from source:
 
 ```bash
-axon install
+go install github.com/axon-core/axon/cmd/mbm@latest
+```
+
+### 2. Install MBM
+
+```bash
+mbm install
 ```
 
 ### 3. Initialize Your Config
 
 ```bash
-axon init
-# Edit ~/.axon/config.yaml with your token and workspace:
+mbm init
+# Edit ~/.mbm/config.yaml with your token and workspace:
 #   oauthToken: <your-oauth-token>
 #   workspace:
 #     repo: https://github.com/your-org/your-repo.git
@@ -108,8 +126,8 @@ axon init
 ### 4. Run Your First Task
 
 ```bash
-axon run -p "Add a hello world program in Python"
-axon logs <task-name> -f
+mbm run -p "Add a hello world program in Python"
+mbm logs <task-name> -f
 ```
 
 The agent clones your repo, makes changes, and can push a branch or open a PR.
@@ -161,13 +179,13 @@ kubectl get tasks -w
 <details>
 <summary>Using an API key instead of OAuth</summary>
 
-Set `apiKey` instead of `oauthToken` in `~/.axon/config.yaml`:
+Set `apiKey` instead of `oauthToken` in `~/.mbm/config.yaml`:
 
 ```yaml
 apiKey: <your-api-key>
 ```
 
-Or pass `--secret` to `axon run` with a pre-created secret (api-key is the default credential type), or set `spec.credentials.type: api-key` in YAML.
+Or pass `--secret` to `mbm run` with a pre-created secret (api-key is the default credential type), or set `spec.credentials.type: api-key` in YAML.
 
 </details>
 
@@ -178,7 +196,7 @@ Or pass `--secret` to `axon run` with a pre-created secret (api-key is the defau
 Add `workspace` to your config:
 
 ```yaml
-# ~/.axon/config.yaml
+# ~/.mbm/config.yaml
 oauthToken: <your-oauth-token>
 workspace:
   repo: https://github.com/your-org/repo.git
@@ -186,15 +204,15 @@ workspace:
 ```
 
 ```bash
-axon run -p "Add unit tests"
+mbm run -p "Add unit tests"
 ```
 
-Axon auto-creates the Workspace resource from your config.
+MBM auto-creates the Workspace resource from your config.
 
 Or reference an existing Workspace resource with `--workspace`:
 
 ```bash
-axon run -p "Add unit tests" --workspace my-workspace
+mbm run -p "Add unit tests" --workspace my-workspace
 ```
 
 ### Create PRs automatically
@@ -209,7 +227,7 @@ workspace:
 ```
 
 ```bash
-axon run -p "Fix the bug described in issue #42 and open a PR with the fix"
+mbm run -p "Fix the bug described in issue #42 and open a PR with the fix"
 ```
 
 The `gh` CLI and `GITHUB_TOKEN` are available inside the agent container, so the agent can push branches and create PRs autonomously.
@@ -269,7 +287,7 @@ spec:
 Or via the CLI:
 
 ```bash
-axon run -p "Fix the bug" --agents-md "Follow TDD" --skill deploy=@skills/deploy.md --agent reviewer=@agents/reviewer.md
+mbm run -p "Fix the bug" --agents-md "Follow TDD" --skill deploy=@skills/deploy.md --agent reviewer=@agents/reviewer.md
 ```
 
 - `agentsMD` is written to `~/.claude/CLAUDE.md` (user-level, additive with the repo's own files)
@@ -337,7 +355,7 @@ kubectl apply -f cron-spawner.yaml
 
 ### Autonomous self-development pipeline
 
-This is a real-world TaskSpawner that picks up every open issue, investigates it, opens (or updates) a PR, self-reviews, and ensures CI passes — fully autonomously. When the agent can't make progress, it labels the issue `axon/needs-input` and stops. Remove the label to re-queue it.
+This is a real-world TaskSpawner that picks up every open issue, investigates it, opens (or updates) a PR, self-reviews, and ensures CI passes — fully autonomously. When the agent can't make progress, it labels the issue `mbm/needs-input` and stops. Remove the label to re-queue it.
 
 ```
  ┌──────────────────────────────────────────────────────────────────┐
@@ -361,7 +379,7 @@ This is a real-world TaskSpawner that picks up every open issue, investigates it
 
 See [`self-development/axon-workers.yaml`](self-development/axon-workers.yaml) for the full manifest and the [`self-development/` README](self-development/README.md) for setup instructions.
 
-The key pattern here is `excludeLabels: [axon/needs-input]` — this creates a feedback loop where the agent works autonomously until it needs human input, then pauses. Removing the label re-queues the issue on the next poll.
+The key pattern here is `excludeLabels: [mbm/needs-input]` — this creates a feedback loop where the agent works autonomously until it needs human input, then pauses. Removing the label re-queues the issue on the next poll.
 
 ### Copy-paste YAML manifests
 
@@ -375,12 +393,12 @@ The [`examples/`](examples/) directory contains self-contained, ready-to-apply Y
 | **Pluggable Agents** | Bring any agent (Claude, Codex, Gemini) or your own custom image by implementing a simple shell interface. |
 | **Safe Autonomy** | Run agents with full system access inside isolated, ephemeral Pods with zero risk to the host. |
 | **Workspace Isolation** | Each run gets a dedicated, freshly cloned git workspace with automated credential injection. |
-| **Standardized Outputs** | Axon captures deterministic outputs (branch names, PR URLs) from agent runs into Kubernetes status. |
+| **Standardized Outputs** | MBM captures deterministic outputs (branch names, PR URLs) from agent runs into Kubernetes status. |
 | **Lifecycle Management** | Built-in TTL management, owner references, and automatic cleanup of finished runs. |
 | **Infrastructure Scale** | Fan out hundreds of agents. Kubernetes handles scheduling, resource limits (CPU/MEM), and priorities. |
 | **Credential Safety** | Securely manage API keys and OAuth tokens using Kubernetes Secrets, injected only when needed. |
 | **Observable** | Track agent progress through `Pending` → `Running` → `Succeeded`/`Failed` using standard K8s tools. |
-| **CLI & YAML** | Manage the entire lifecycle via the `axon` CLI or declarative YAML manifests (GitOps ready). |
+| **CLI & YAML** | Manage the entire lifecycle via the `mbm` CLI or declarative YAML manifests (GitOps ready). |
 
 ## Orchestration Patterns
 
@@ -511,10 +529,10 @@ The `promptTemplate` field uses Go `text/template` syntax. Available variables d
 <details>
 <summary><strong>Configuration</strong></summary>
 
-Axon reads defaults from `~/.axon/config.yaml` (override with `--config`). CLI flags always take precedence over config file values.
+MBM reads defaults from `~/.mbm/config.yaml` (override with `--config`). CLI flags always take precedence over config file values.
 
 ```yaml
-# ~/.axon/config.yaml
+# ~/.mbm/config.yaml
 oauthToken: <your-oauth-token>
 # or: apiKey: <your-api-key>
 model: claude-sonnet-4-5-20250929
@@ -525,8 +543,8 @@ namespace: my-namespace
 
 | Field | Description |
 |-------|-------------|
-| `oauthToken` | OAuth token — Axon auto-creates the Kubernetes secret |
-| `apiKey` | API key — Axon auto-creates the Kubernetes secret |
+| `oauthToken` | OAuth token — MBM auto-creates the Kubernetes secret |
+| `apiKey` | API key — MBM auto-creates the Kubernetes secret |
 | `secret` | (Advanced) Use a pre-created Kubernetes secret |
 | `credentialType` | Credential type when using `secret` (`api-key` or `oauth`) |
 
@@ -543,7 +561,7 @@ workspace:
   name: my-workspace
 ```
 
-**Specify inline — Axon auto-creates the Workspace resource and secret:**
+**Specify inline — MBM auto-creates the Workspace resource and secret:**
 
 ```yaml
 workspace:
@@ -555,9 +573,9 @@ workspace:
 | Field | Description |
 |-------|-------------|
 | `workspace.name` | Name of an existing Workspace resource |
-| `workspace.repo` | Git repository URL — Axon auto-creates a Workspace resource |
+| `workspace.repo` | Git repository URL — MBM auto-creates a Workspace resource |
 | `workspace.ref` | Git reference (branch, tag, or commit SHA) |
-| `workspace.token` | GitHub token — Axon auto-creates the secret and injects `GITHUB_TOKEN` |
+| `workspace.token` | GitHub token — MBM auto-creates the secret and injects `GITHUB_TOKEN` |
 
 If both `name` and `repo` are set, `name` takes precedence. The `--workspace` CLI flag overrides all config values.
 
@@ -574,30 +592,30 @@ If both `name` and `repo` are set, `name` takes precedence. The `--workspace` CL
 <details>
 <summary><strong>CLI Reference</strong></summary>
 
-The `axon` CLI lets you manage the full lifecycle without writing YAML.
+The `mbm` CLI lets you manage the full lifecycle without writing YAML.
 
 ### Core Commands
 
 | Command | Description |
 |---------|-------------|
-| `axon install` | Install Axon CRDs and controller into the cluster |
-| `axon uninstall` | Uninstall Axon from the cluster |
-| `axon init` | Initialize `~/.axon/config.yaml` |
-| `axon version` | Print version information |
+| `mbm install` | Install CRDs and controller into the cluster |
+| `mbm uninstall` | Uninstall MBM from the cluster |
+| `mbm init` | Initialize `~/.mbm/config.yaml` |
+| `mbm version` | Print version information |
 
 ### Resource Management
 
 | Command | Description |
 |---------|-------------|
-| `axon run` | Create and run a new Task |
-| `axon create workspace` | Create a Workspace resource |
-| `axon get <resource>` | List resources (`tasks`, `taskspawners`, `workspaces`) |
-| `axon delete <resource> <name>` | Delete a resource |
-| `axon logs <task-name> [-f]` | View or stream logs from a task |
+| `mbm run` | Create and run a new Task |
+| `mbm create workspace` | Create a Workspace resource |
+| `mbm get <resource>` | List resources (`tasks`, `taskspawners`, `workspaces`) |
+| `mbm delete <resource> <name>` | Delete a resource |
+| `mbm logs <task-name> [-f]` | View or stream logs from a task |
 
 ### Common Flags
 
-- `--config`: Path to config file (default `~/.axon/config.yaml`)
+- `--config`: Path to config file (default `~/.mbm/config.yaml`)
 - `--namespace, -n`: Kubernetes namespace
 - `--kubeconfig`: Path to kubeconfig file
 - `--dry-run`: Print resources without creating them (supported by `run`, `create`, `install`)
@@ -609,7 +627,7 @@ The `axon` CLI lets you manage the full lifecycle without writing YAML.
 ## Uninstall
 
 ```bash
-axon uninstall
+mbm uninstall
 ```
 
 ## Development

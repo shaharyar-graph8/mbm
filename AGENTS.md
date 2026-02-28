@@ -18,7 +18,15 @@
 - `make build` — build binary
 
 ## Directory Structure
-- `cmd/` — CLI entrypoints
+- `cmd/mbm/` — CLI entrypoint
+- `cmd/axon-controller/` — Controller binary
+- `cmd/axon-spawner/` — Spawner binary
+- `internal/cli/` — CLI commands and config
+- `internal/controller/` — Controller reconcilers
+- `internal/manifests/` — Embedded install manifests
 - `test/e2e/` — end-to-end tests
-- `.github/workflows/` — CI workflows
+- `.github/workflows/` — CI and release workflows
 
+## Registry
+- Container images: `ghcr.io/shaharyar-graph8/mbm/`
+- CLI binaries: GitHub Releases on this repo
