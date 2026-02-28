@@ -245,13 +245,13 @@ spec:
         runAsNonRoot: true
       containers:
         - name: manager
-          image: gjkim42/axon-controller:latest
+          image: ghcr.io/shaharyar-graph8/mbm/axon-controller:latest
           args:
             - --leader-elect
-            - --claude-code-image=gjkim42/claude-code:latest
-            - --codex-image=gjkim42/codex:latest
-            - --gemini-image=gjkim42/gemini:latest
-            - --spawner-image=gjkim42/axon-spawner:latest
+            - --claude-code-image=ghcr.io/shaharyar-graph8/mbm/claude-code:latest
+            - --codex-image=ghcr.io/shaharyar-graph8/mbm/codex:latest
+            - --gemini-image=ghcr.io/shaharyar-graph8/mbm/gemini:latest
+            - --spawner-image=ghcr.io/shaharyar-graph8/mbm/axon-spawner:latest
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:

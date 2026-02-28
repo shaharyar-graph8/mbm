@@ -2,38 +2,75 @@ name: Release
 
 on:
   push:
-    branches: [main]
     tags: ["v*"]
 
+permissions:
+  contents: write
+  packages: write
+
+env:
+  REGISTRY: ghcr.io/shaharyar-graph8/mbm
+
 jobs:
-  release:
+  cli:
+    name: Build CLI binaries
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - uses: actions/setup-go@v5
         with:
-          username: gjkim42
-          password: ${{ secrets.DOCKERHUB_AXON_TOKEN }}
+          go-version-file: go.mod
 
       - name: Determine version
         id: version
+        run: echo "version=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
+      - name: Build linux/amd64
         run: |
-          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
-            echo "version=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
-          else
-            echo "version=latest" >> "$GITHUB_OUTPUT"
-          fi
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+            -ldflags "-X github.com/axon-core/axon/internal/version.Version=${{ steps.version.outputs.version }}" \
+            -o mbm-linux-amd64 ./cmd/mbm
 
-      - name: Build images
-        run: make image VERSION=${{ steps.version.outputs.version }}
-
-      - name: Push images
-        run: make push VERSION=${{ steps.version.outputs.version }}
-
-      - name: Push latest tags for releases
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Build darwin/arm64
         run: |
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build \
+            -ldflags "-X github.com/axon-core/axon/internal/version.Version=${{ steps.version.outputs.version }}" \
+            -o mbm-darwin-arm64 ./cmd/mbm
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            mbm-linux-amd64
+            mbm-darwin-arm64
+          generate_release_notes: true
+
+  images:
+    name: Build and push container images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine version
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push images
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          make image VERSION=$VERSION
+          make push VERSION=$VERSION
           make image VERSION=latest
           make push VERSION=latest

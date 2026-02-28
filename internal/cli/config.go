@@ -38,13 +38,13 @@ type GitHubAppConfig struct {
 	PrivateKeyPath string `json:"privateKeyPath"`
 }
 
-// DefaultConfigPath returns the default config file path (~/.axon/config.yaml).
+// DefaultConfigPath returns the default config file path (~/.mbm/config.yaml).
 func DefaultConfigPath() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("getting home directory: %w", err)
 	}
-	return filepath.Join(home, ".axon", "config.yaml"), nil
+	return filepath.Join(home, ".mbm", "config.yaml"), nil
 }
 
 // LoadConfig reads and parses the config file at the given path.

@@ -1,5 +1,5 @@
 # Image configuration
-REGISTRY ?= gjkim42
+REGISTRY ?= ghcr.io/shaharyar-graph8/mbm
 VERSION ?= latest
 IMAGE_DIRS ?= cmd/axon-controller cmd/axon-spawner cmd/axon-token-refresher claude-code codex gemini
 
@@ -66,7 +66,7 @@ verify: controller-gen ## Verify everything is up-to-date and correct.
 ##@ Build
 
 .PHONY: build
-build: ## Build binaries (use WHAT=cmd/axon to build specific binary).
+build: ## Build binaries (use WHAT=cmd/mbm to build specific binary).
 	@for dir in $$(go list ./$(or $(WHAT),cmd/...)); do \
 		bin_name=$$(basename $$dir); \
 		CGO_ENABLED=0 go build -ldflags "$(LDFLAGS)" -o bin/$$bin_name $$dir; \
