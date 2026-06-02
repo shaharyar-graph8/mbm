@@ -801,28 +801,33 @@ func TestBuildCodexJob_OAuthCredentials(t *testing.T) {
 
 	container := job.Spec.Template.Spec.Containers[0]
 
-	// CODEX_API_KEY should be set for codex oauth.
-	foundCodexKey := false
+	// For codex, the oauth credential type carries the ChatGPT-subscription
+	// auth.json blob via CODEX_AUTH_JSON (flat-rate). CODEX_API_KEY is the
+	// api-key (pay-per-token) path and must NOT be set here.
+	foundAuthJSON := false
 	for _, env := range container.Env {
-		if env.Name == "CODEX_API_KEY" {
-			foundCodexKey = true
+		if env.Name == "CODEX_AUTH_JSON" {
+			foundAuthJSON = true
 			if env.ValueFrom == nil || env.ValueFrom.SecretKeyRef == nil {
-				t.Error("Expected CODEX_API_KEY to reference a secret")
+				t.Error("Expected CODEX_AUTH_JSON to reference a secret")
 			} else {
 				if env.ValueFrom.SecretKeyRef.Name != "codex-oauth" {
 					t.Errorf("Expected secret name %q, got %q", "codex-oauth", env.ValueFrom.SecretKeyRef.Name)
 				}
-				if env.ValueFrom.SecretKeyRef.Key != "CODEX_API_KEY" {
-					t.Errorf("Expected secret key %q, got %q", "CODEX_API_KEY", env.ValueFrom.SecretKeyRef.Key)
+				if env.ValueFrom.SecretKeyRef.Key != "CODEX_AUTH_JSON" {
+					t.Errorf("Expected secret key %q, got %q", "CODEX_AUTH_JSON", env.ValueFrom.SecretKeyRef.Key)
 				}
 			}
+		}
+		if env.Name == "CODEX_API_KEY" {
+			t.Error("CODEX_API_KEY should not be set for codex oauth (that is the api-key path)")
 		}
 		if env.Name == "CLAUDE_CODE_OAUTH_TOKEN" {
 			t.Error("CLAUDE_CODE_OAUTH_TOKEN should not be set for codex agent type")
 		}
 	}
-	if !foundCodexKey {
-		t.Error("Expected CODEX_API_KEY env var to be set")
+	if !foundAuthJSON {
+		t.Error("Expected CODEX_AUTH_JSON env var to be set")
 	}
 }
 

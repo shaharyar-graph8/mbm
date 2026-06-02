@@ -27,7 +27,8 @@ RUN ARCH=$(dpkg --print-architecture) \
 
 ENV PATH="/usr/local/go/bin:${PATH}"
 
-RUN npm install -g @anthropic-ai/claude-code
+# Pinned for reproducible builds (was unpinned @latest). Bump deliberately.
+RUN npm install -g @anthropic-ai/claude-code@2.1.159
 
 COPY claude-code/axon_entrypoint.sh /axon_entrypoint.sh
 RUN chmod +x /axon_entrypoint.sh

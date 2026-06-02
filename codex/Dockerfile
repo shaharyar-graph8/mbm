@@ -27,7 +27,8 @@ RUN ARCH=$(dpkg --print-architecture) \
 
 ENV PATH="/usr/local/go/bin:${PATH}"
 
-RUN npm install -g @openai/codex
+# Pinned for reproducible builds (was unpinned @latest). Bump deliberately.
+RUN npm install -g @openai/codex@0.136.0
 
 COPY codex/axon_entrypoint.sh /axon_entrypoint.sh
 RUN chmod +x /axon_entrypoint.sh

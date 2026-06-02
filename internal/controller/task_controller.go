@@ -92,9 +92,31 @@ func (r *TaskReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 	}
 
-	// Create Job if it doesn't exist
+	// Decide what to do when the Job is absent.
 	if !jobExists {
-		return r.createJob(ctx, &task)
+		switch {
+		case task.Status.Phase == axonv1alpha1.TaskPhaseSucceeded ||
+			task.Status.Phase == axonv1alpha1.TaskPhaseFailed:
+			// The Task already reached a terminal phase; its Job was
+			// cleaned up after completion (Job has no TTL, so this is the
+			// external axon cleanup CronJob). Do NOT recreate it — leave
+			// the terminal Task for the TTL reaper. Recreating here was the
+			// root cause of the re-run storms / duplicate PRs.
+			return ctrl.Result{}, nil
+		case task.Status.JobName != "":
+			// A Job was previously created for this Task (JobName recorded)
+			// but has since vanished while the Task is still non-terminal.
+			// This is the "Job GC'd before its status was observed" race:
+			// the cleanup CronJob deleted a finished Job before updateStatus
+			// ran. Recreating would re-run the agent and reset the Task to
+			// Pending forever (the perpetual-Pending bug). Mark the Task
+			// terminal instead — its true success/failure is unknowable
+			// here, so fail it conservatively rather than silently re-run.
+			return r.markOrphanedJobFailed(ctx, &task)
+		default:
+			// No Job has ever been created for this Task (first reconcile).
+			return r.createJob(ctx, &task)
+		}
 	}
 
 	// Update status based on Job status
@@ -332,6 +354,42 @@ func (r *TaskReconciler) resolveGitHubAppToken(ctx context.Context, task *axonv1
 		Name: tokenSecretName,
 	}
 	return &resolved, nil
+}
+
+// markOrphanedJobFailed transitions a non-terminal Task whose Job has
+// disappeared (GC'd before its terminal status was observed) into the
+// Failed phase. This breaks the perpetual-Pending loop: without it,
+// Reconcile would recreate the Job and re-run the agent indefinitely.
+// We cannot recover the real outcome once the Job/Pod are gone, so we
+// fail conservatively rather than silently re-running side effects.
+func (r *TaskReconciler) markOrphanedJobFailed(ctx context.Context, task *axonv1alpha1.Task) (ctrl.Result, error) {
+	logger := log.FromContext(ctx)
+	logger.Info("Job disappeared before completion status was observed; marking Task Failed without re-running",
+		"task", task.Name, "jobName", task.Status.JobName, "phase", task.Status.Phase)
+
+	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		if getErr := r.Get(ctx, client.ObjectKeyFromObject(task), task); getErr != nil {
+			return getErr
+		}
+		// Re-check under the fresh read: another reconcile may have already
+		// settled the Task, in which case leave it alone.
+		if task.Status.Phase == axonv1alpha1.TaskPhaseSucceeded ||
+			task.Status.Phase == axonv1alpha1.TaskPhaseFailed {
+			return nil
+		}
+		now := metav1.Now()
+		task.Status.Phase = axonv1alpha1.TaskPhaseFailed
+		task.Status.Message = "Job disappeared before its completion status could be observed (likely GC'd post-run); not re-running"
+		if task.Status.StartTime == nil {
+			task.Status.StartTime = &now
+		}
+		task.Status.CompletionTime = &now
+		return r.Status().Update(ctx, task)
+	}); err != nil {
+		logger.Error(err, "Unable to mark orphaned Task as Failed")
+		return ctrl.Result{}, err
+	}
+	return ctrl.Result{}, nil
 }
 
 // updateStatus updates Task status based on Job status.

@@ -112,7 +112,11 @@ func apiKeyEnvVar(agentType string) string {
 func oauthEnvVar(agentType string) string {
 	switch agentType {
 	case AgentTypeCodex:
-		return "CODEX_API_KEY"
+		// For codex, the oauth credential type carries the full
+		// ChatGPT-subscription auth.json blob (flat-rate). The codex
+		// entrypoint materializes it to ~/.codex/auth.json. This is
+		// distinct from the api-key path (CODEX_API_KEY, pay-per-token).
+		return "CODEX_AUTH_JSON"
 	case AgentTypeGemini:
 		return "GEMINI_API_KEY"
 	default:
