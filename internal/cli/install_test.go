@@ -276,10 +276,10 @@ func TestVersionedManifest_EmbeddedControllerImageArgs(t *testing.T) {
 
 	// Verify the embedded manifest contains image flags that will be versioned.
 	expectedArgs := []string{
-		"--claude-code-image=gjkim42/claude-code:",
-		"--codex-image=gjkim42/codex:",
-		"--gemini-image=gjkim42/gemini:",
-		"--spawner-image=gjkim42/axon-spawner:",
+		"--claude-code-image=ghcr.io/shaharyar-graph8/mbm/claude-code:",
+		"--codex-image=ghcr.io/shaharyar-graph8/mbm/codex:",
+		"--gemini-image=ghcr.io/shaharyar-graph8/mbm/gemini:",
+		"--spawner-image=ghcr.io/shaharyar-graph8/mbm/axon-spawner:",
 	}
 	for _, arg := range expectedArgs {
 		if !bytes.Contains(manifests.InstallController, []byte(arg)) {
@@ -291,10 +291,10 @@ func TestVersionedManifest_EmbeddedControllerImageArgs(t *testing.T) {
 	version.Version = "v0.3.0"
 	result := versionedManifest(manifests.InstallController)
 	versionedArgs := []string{
-		"--claude-code-image=gjkim42/claude-code:v0.3.0",
-		"--codex-image=gjkim42/codex:v0.3.0",
-		"--gemini-image=gjkim42/gemini:v0.3.0",
-		"--spawner-image=gjkim42/axon-spawner:v0.3.0",
+		"--claude-code-image=ghcr.io/shaharyar-graph8/mbm/claude-code:v0.3.0",
+		"--codex-image=ghcr.io/shaharyar-graph8/mbm/codex:v0.3.0",
+		"--gemini-image=ghcr.io/shaharyar-graph8/mbm/gemini:v0.3.0",
+		"--spawner-image=ghcr.io/shaharyar-graph8/mbm/axon-spawner:v0.3.0",
 	}
 	for _, arg := range versionedArgs {
 		if !bytes.Contains(result, []byte(arg)) {
