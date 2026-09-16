@@ -340,6 +340,7 @@ func (b *JobBuilder) buildAgentJob(task *axonv1alpha1.Task, workspace *axonv1alp
 	// are reflected in the final spec.
 	var activeDeadlineSeconds *int64
 	var nodeSelector map[string]string
+	var tolerations []corev1.Toleration
 
 	if po := task.Spec.PodOverrides; po != nil {
 		if po.Resources != nil {
@@ -366,6 +367,7 @@ func (b *JobBuilder) buildAgentJob(task *axonv1alpha1.Task, workspace *axonv1alp
 
 		if po.NodeSelector != nil {
 			nodeSelector = po.NodeSelector
+			tolerations = roleTolerations(po.NodeSelector)
 		}
 	}
 
@@ -399,12 +401,32 @@ func (b *JobBuilder) buildAgentJob(task *axonv1alpha1.Task, workspace *axonv1alp
 					Volumes:         volumes,
 					Containers:      []corev1.Container{mainContainer},
 					NodeSelector:    nodeSelector,
+					Tolerations:     tolerations,
 				},
 			},
 		},
 	}
 
 	return job, nil
+}
+
+// roleTolerations derives the toleration that lets a pod land on a node
+// tainted `role=<v>:NoSchedule` whenever the nodeSelector pins it to
+// `role: <v>`. Operators taint dedicated agent nodes with the same key/value
+// they label them with, so a selector without the matching toleration makes
+// every Task pod unschedulable the moment the taint is applied. Returns nil
+// when nodeSelector carries no `role` key.
+func roleTolerations(nodeSelector map[string]string) []corev1.Toleration {
+	role, ok := nodeSelector["role"]
+	if !ok || role == "" {
+		return nil
+	}
+	return []corev1.Toleration{{
+		Key:      "role",
+		Operator: corev1.TolerationOpEqual,
+		Value:    role,
+		Effect:   corev1.TaintEffectNoSchedule,
+	}}
 }
 
 func buildWorkspaceFileInjectionScript(files []axonv1alpha1.WorkspaceFile) (string, error) {
