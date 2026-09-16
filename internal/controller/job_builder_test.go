@@ -1331,6 +1331,82 @@ func TestBuildJob_PodOverridesNodeSelector(t *testing.T) {
 	}
 }
 
+// A `role: <v>` nodeSelector must produce the matching role=<v>:NoSchedule
+// toleration. Without it, tainting the dedicated agent node (dev3 in the
+// graph8 aws-cp cluster, 2026-09-16) left every Task pod Pending with
+// "untolerated taint" — nothing in podOverrides can express a toleration.
+func TestBuildJob_RoleNodeSelectorAddsToleration(t *testing.T) {
+	builder := NewJobBuilder()
+	task := &axonv1alpha1.Task{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-role-toleration",
+			Namespace: "default",
+		},
+		Spec: axonv1alpha1.TaskSpec{
+			Type:   AgentTypeClaudeCode,
+			Prompt: "Fix issue",
+			Credentials: axonv1alpha1.Credentials{
+				Type:      axonv1alpha1.CredentialTypeAPIKey,
+				SecretRef: axonv1alpha1.SecretReference{Name: "my-secret"},
+			},
+			PodOverrides: &axonv1alpha1.PodOverrides{
+				NodeSelector: map[string]string{"role": "dev"},
+			},
+		},
+	}
+
+	job, err := builder.Build(task, nil, nil)
+	if err != nil {
+		t.Fatalf("Build() returned error: %v", err)
+	}
+
+	tols := job.Spec.Template.Spec.Tolerations
+	if len(tols) != 1 {
+		t.Fatalf("Expected exactly 1 toleration, got %d: %v", len(tols), tols)
+	}
+	want := corev1.Toleration{
+		Key:      "role",
+		Operator: corev1.TolerationOpEqual,
+		Value:    "dev",
+		Effect:   corev1.TaintEffectNoSchedule,
+	}
+	if tols[0] != want {
+		t.Errorf("Expected toleration %+v, got %+v", want, tols[0])
+	}
+}
+
+// A nodeSelector without a `role` key must not grow a toleration: the
+// derivation is keyed on the taint convention, not on nodeSelector presence.
+func TestBuildJob_NonRoleNodeSelectorAddsNoToleration(t *testing.T) {
+	builder := NewJobBuilder()
+	task := &axonv1alpha1.Task{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-no-role-toleration",
+			Namespace: "default",
+		},
+		Spec: axonv1alpha1.TaskSpec{
+			Type:   AgentTypeClaudeCode,
+			Prompt: "Fix issue",
+			Credentials: axonv1alpha1.Credentials{
+				Type:      axonv1alpha1.CredentialTypeAPIKey,
+				SecretRef: axonv1alpha1.SecretReference{Name: "my-secret"},
+			},
+			PodOverrides: &axonv1alpha1.PodOverrides{
+				NodeSelector: map[string]string{"gpu": "true"},
+			},
+		},
+	}
+
+	job, err := builder.Build(task, nil, nil)
+	if err != nil {
+		t.Fatalf("Build() returned error: %v", err)
+	}
+
+	if tols := job.Spec.Template.Spec.Tolerations; len(tols) != 0 {
+		t.Errorf("Expected no tolerations, got %v", tols)
+	}
+}
+
 func TestBuildJob_PodOverridesAllFields(t *testing.T) {
 	builder := NewJobBuilder()
 	task := &axonv1alpha1.Task{
